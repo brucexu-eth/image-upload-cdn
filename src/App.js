@@ -42,7 +42,7 @@ function App() {
     await octokit.current.request("PUT /repos/{owner}/{repo}/contents/{path}", {
       owner: userInfo.current.login,
       repo: "image-upload-cdn",
-      path: `${files.fileList[0].name}`,
+      path: `public/${files.fileList[0].name}`,
       message: `${userInfo.current.name}上传图片`,
       content: Base64.encode(Base64.decode(files.base64[0])),
     });
