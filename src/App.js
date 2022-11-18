@@ -1,8 +1,8 @@
 import { useForm } from "react-hook-form";
 import { useRef, useState } from "react";
 import { Octokit } from "octokit";
-import { Base64 } from "js-base64";
 import ReactFileReader from "react-file-reader";
+import { v4 as uuidv4 } from "uuid";
 
 function App() {
   const {
@@ -11,15 +11,18 @@ function App() {
     formState: { errors },
   } = useForm();
 
-  const [files, setFiles] = useState(null);
+  const [fileInfo, setFileInfo] = useState(null);
   const octokit = useRef(null);
   const userInfo = useRef(null);
-  const imgInfo = useRef(null);
 
   const submitForm = async (data) => {
+    console.log(data);
+    if (!fileInfo) return;
     initOctokit(data.token);
     userInfo.current = await queryUser(data);
-    uploadImg();
+    const allImages = queryAllImage();
+    console.log(allImages);
+    // uploadImg();
   };
 
   const initOctokit = (token) => {
@@ -28,6 +31,14 @@ function App() {
     });
     octokit.current = OCTOKIT;
   };
+
+  const queryAllImage = async (data) => {
+    return await octokit.current.request('GET /repos/{owner}/{repo}/contents/{path}{?ref}', {
+      owner: userInfo.current.login,
+      repo: "image-upload-cdn",
+      path: 'public/images'
+    })
+  }
 
   const queryUser = async () => {
     try {
@@ -39,20 +50,19 @@ function App() {
   };
 
   const uploadImg = async () => {
+    const path = `public/images/${uuidv4()}.${fileInfo.fileList[0].name.split('.').pop()}`;
     await octokit.current.request("PUT /repos/{owner}/{repo}/contents/{path}", {
       owner: userInfo.current.login,
       repo: "image-upload-cdn",
-      path: `public/${files.fileList[0].name}`,
+      path,
       message: `${userInfo.current.name}上传图片`,
-      content: files.base64[0],
+      content: fileInfo.base64,
     });
   };
 
   const handleFiles = (file) => {
-   
-    file.base64 = file.base64.map(item=>(item.split("base64,")[1]));
-     console.log(file);
-    setFiles(file);
+    file.base64 = file.base64.split("base64,")[1];
+    setFileInfo(file);
   };
 
   return (
@@ -68,21 +78,24 @@ function App() {
               required: true,
               value: "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",
             })}
-            className="border-2 rounded-sm"
+            className="border-2 rounded-sm w-[100%] px-2"
           />
           {errors.token && <p className="text-rose-500">token is required.</p>}
         </div>
 
         <label>选择图片: </label>
-        <ReactFileReader base64={true} multipleFiles = { true } handleFiles={handleFiles}>
-          <button className="btn underline">upload</button>
+        <ReactFileReader base64={true} handleFiles={handleFiles}>
+          <>
+          {fileInfo?.fileList[0]?.name || ""}
+          <button className="btn underline ml-2">choose Image</button>
+          </>
         </ReactFileReader>
         <label>地址: </label>
         <span></span>
-        <input
+        <button
           type="submit"
           className="col-span-2 w-[200px] m-[auto] rounded-xl border-2 py-1"
-        />
+        >提交</button>
       </form>
     </div>
   );
