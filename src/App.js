@@ -10,19 +10,18 @@ function App() {
     handleSubmit,
     formState: { errors },
   } = useForm();
-
   const [fileInfo, setFileInfo] = useState(null);
   const octokit = useRef(null);
   const userInfo = useRef(null);
+  const [imgUrl, setImgUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const submitForm = async (data) => {
-    console.log(data);
-    if (!fileInfo) return;
+    if (!fileInfo || loading) return;
+    setLoading(true);
     initOctokit(data.token);
     userInfo.current = await queryUser(data);
-    const allImages = queryAllImage();
-    console.log(allImages);
-    // uploadImg();
+    uploadImg();
   };
 
   const initOctokit = (token) => {
@@ -32,32 +31,34 @@ function App() {
     octokit.current = OCTOKIT;
   };
 
-  const queryAllImage = async (data) => {
-    return await octokit.current.request('GET /repos/{owner}/{repo}/contents/{path}{?ref}', {
-      owner: userInfo.current.login,
-      repo: "image-upload-cdn",
-      path: 'public/images'
-    })
-  }
-
   const queryUser = async () => {
     try {
       const result = await octokit.current.request("GET /user", {});
       return result.data;
     } catch (err) {
       console.log(err);
+      setLoading(false);
     }
   };
 
   const uploadImg = async () => {
-    const path = `public/images/${uuidv4()}.${fileInfo.fileList[0].name.split('.').pop()}`;
-    await octokit.current.request("PUT /repos/{owner}/{repo}/contents/{path}", {
-      owner: userInfo.current.login,
-      repo: "image-upload-cdn",
-      path,
-      message: `${userInfo.current.name}上传图片`,
-      content: fileInfo.base64,
-    });
+    const path = `public/images/${uuidv4()}.${fileInfo.fileList[0].name
+      .split(".")
+      .pop()}`;
+    const result = await octokit.current.request(
+      "PUT /repos/{owner}/{repo}/contents/{path}",
+      {
+        owner: userInfo.current.login,
+        repo: "image-upload-cdn",
+        path,
+        message: `${userInfo.current.name}上传图片`,
+        content: fileInfo.base64,
+      }
+    );
+    if (result.data) {
+      setImgUrl(`${process.env.REACT_APP_IMAGEURL}images/${result.data.content.name}`);
+    }
+    setLoading(false);
   };
 
   const handleFiles = (file) => {
@@ -83,19 +84,21 @@ function App() {
           {errors.token && <p className="text-rose-500">token is required.</p>}
         </div>
 
-        <label>选择图片: </label>
+        <label>image: </label>
         <ReactFileReader base64={true} handleFiles={handleFiles}>
           <>
-          {fileInfo?.fileList[0]?.name || ""}
-          <button className="btn underline ml-2">choose Image</button>
+            {fileInfo?.fileList[0]?.name || ""}
+            <button className="btn underline ml-2">choose Image</button>
           </>
         </ReactFileReader>
-        <label>地址: </label>
-        <span></span>
+        <label>address:</label>
+        <span>{imgUrl}</span>
         <button
           type="submit"
           className="col-span-2 w-[200px] m-[auto] rounded-xl border-2 py-1"
-        >提交</button>
+        >
+          {loading ? "loading..." : "submit"}
+        </button>
       </form>
     </div>
   );
