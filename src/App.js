@@ -44,7 +44,7 @@ function App() {
       repo: "image-upload-cdn",
       path: `public/${files.fileList[0].name}`,
       message: `${userInfo.current.name}上传图片`,
-      content: Base64.encode(Base64.decode(files.base64[0])),
+      content: files.base64[0],
     });
   };
 
