@@ -49,7 +49,9 @@ function App() {
   };
 
   const handleFiles = (file) => {
-    console.log(file);
+   
+    files.base64 = files.base64.map(item=>(item.split("base64,")[1]));
+     console.log(file);
     setFiles(file);
   };
 
