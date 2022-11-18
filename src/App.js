@@ -42,23 +42,31 @@ function App() {
   };
 
   const uploadImg = async () => {
+    if (!userInfo.current) return;
     const path = `public/images/${uuidv4()}.${fileInfo.fileList[0].name
       .split(".")
       .pop()}`;
-    const result = await octokit.current.request(
-      "PUT /repos/{owner}/{repo}/contents/{path}",
-      {
-        owner: userInfo.current.login,
-        repo: "image-upload-cdn",
-        path,
-        message: `${userInfo.current.name}上传图片`,
-        content: fileInfo.base64,
+    try {
+      const result = await octokit.current.request(
+        "PUT /repos/{owner}/{repo}/contents/{path}",
+        {
+          owner: userInfo.current.login,
+          repo: "image-upload-cdn",
+          path,
+          message: `${userInfo.current.name}上传图片`,
+          content: fileInfo.base64,
+        }
+      );
+      if (result.data) {
+        setImgUrl(
+          `${process.env.REACT_APP_IMAGEURL}images/${result.data.content.name}`
+        );
+        setLoading(false);
       }
-    );
-    if (result.data) {
-      setImgUrl(`${process.env.REACT_APP_IMAGEURL}images/${result.data.content.name}`);
+    } catch (err) {
+      console.log(err);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleFiles = (file) => {
@@ -77,7 +85,7 @@ function App() {
           <input
             {...register("token", {
               required: true,
-              value: "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",
+              value: "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",
             })}
             className="border-2 rounded-sm w-[100%] px-2"
           />
